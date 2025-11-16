@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Operación aritmética → n8n</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* 1. Reseteo y Estilos Base */
+    :root {
+      --color-primary: #007bff;
+      --color-primary-dark: #0056b3;
+      --color-success: #28a745;
+      --color-error: #dc3545;
+      --color-loading: #6c757d;
+      --color-bg: #f4f7f6;
+      --color-card-bg: #ffffff;
+      --color-text: #212529;
+      --color-text-light: #6c757d;
+      --color-border: #e0e0e0;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: var(--color-bg);
+      color: var(--color-text);
+      display: grid;
+      place-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    /* 2. Contenedor Principal (La Tarjeta) */
+    .container {
+      background-color: var(--color-card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 2.5rem;
+      max-width: 500px;
+      width: 100%;
+      border-top: 4px solid var(--color-primary);
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--color-primary);
+    }
+
+    p {
+      margin-bottom: 1.5rem;
+      color: var(--color-text-light);
+    }
+
+    p code {
+      background-color: var(--color-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+
+    /* 3. Formulario */
+    form {
+      display: grid;
+      gap: 12px;
+    }
+
+    input#expr {
+      padding: 14px;
+      font-size: 16px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    input#expr:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+    }
+
+    button[type="submit"] {
+      background-color: var(--color-primary);
+      color: white;
+      border: none;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 500;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+
+    button[type="submit"]:hover {
+      background-color: var(--color-primary-dark);
+    }
+
+    button[type="submit"]:active {
+      transform: scale(0.98);
+    }
+
+    button[type="submit"]:disabled {
+      background-color: var(--color-loading);
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    /* 4. Mensajes de Estado (para 'Loading' y 'Error') */
+    .msg {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: var(--radius);
+      font-weight: 500;
+      text-align: center;
+      display: none; /* Oculto por defecto */
+    }
+    
+    .msg.loading, .msg.error {
+      display: block; /* Mostrar solo si es loading o error */
+    }
+
+    .msg.loading {
+      background-color: #e9ecef;
+      color: var(--color-loading);
+      border: 1px solid #ced4da;
+    }
+    
+    .msg.error {
+      background-color: #fbebee;
+      color: var(--color-error);
+      border: 1px solid #f5c6cb;
+    }
+
+    /* 5. Estilos del Modal */
+    .modal-overlay {
+      display: none; /* Oculto por defecto */
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal {
+      display: none; /* Oculto por defecto */
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      background: white;
+      border-radius: var(--radius);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      z-index: 101;
+      width: 90%;
+      max-width: 500px;
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    /* Clases 'visible' para activar con JS */
+    .modal-overlay.visible,
+    .modal.visible {
+      display: block;
+      opacity: 1;
+    }
+    .modal.visible {
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .modal-header h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+
+    .modal-close {
+      font-size: 2rem;
+      font-weight: 300;
+      line-height: 1;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--color-text-light);
+      padding: 0;
+    }
+    .modal-close:hover {
+      color: var(--color-error);
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+    }
+    
+    .modal-body ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    .modal-body li {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--color-bg);
+      gap: 1rem;
+    }
+    .modal-body li:last-child {
+      border-bottom: none;
+    }
+    .modal-body li strong {
+      color: var(--color-text-light);
+      white-space: nowrap;
+    }
+    .modal-body li span {
+      font-weight: 500;
+      text-align: right;
+      word-break: break-word; /* Para IPs o ciudades largas */
+    }
+    
+  </style>
+</head>
+<body>
+
+  <main class="container">
+    <h1>Resolver operación con n8n + OpenAI + RDS</h1>
+
+    <form id="opForm">
+      <input id="expr" name="expr" placeholder="Escribe tu operación..." required />
+      <button type="submit" id="submitButton">Enviar</button>
+    </form>
+
+    <div class="msg" id="msg"></div>
+  </main>
+
+  <div id="modalOverlay" class="modal-overlay"></div>
+  <div id="modal" class="modal">
+    <div class="modal-header">
+      <h2>Resultado de la Operación</h2>
+      <button id="closeModal" class="modal-close">&times;</button>
+    </div>
+    <div id="modalBody" class="modal-body">
+      </div>
+  </div>
+
+
+  <script>
+    // 🔗 Usa el path del Webhook
+    const WEBHOOK_URL = "https://daniela-navarro.app.n8n.cloud/webhook/05a0b208-60e1-4683-9dd1-ae307106a7a1";
+
+    // === SELECTORES DE ELEMENTOS ===
+    const opForm = document.getElementById("opForm");
+    const msg = document.getElementById("msg");
+    const button = document.getElementById("submitButton");
+    
+    const modalOverlay = document.getElementById("modalOverlay");
+    const modal = document.getElementById("modal");
+    const modalBody = document.getElementById("modalBody");
+    const closeModal = document.getElementById("closeModal");
+
+    // === FUNCIONES DEL MODAL ===
+    function hideModal() {
+      modalOverlay.classList.remove("visible");
+      modal.classList.remove("visible");
+    }
+
+    // Asignar eventos para cerrar el modal
+    closeModal.addEventListener("click", hideModal);
+    modalOverlay.addEventListener("click", hideModal);
+
+    // === FUNCIONES DE FETCH ===
+    async function getClientIP() {
+      // Esta función ya no es necesaria si el webhook la obtiene, pero
+      // la dejamos por si la quieres usar en el futuro.
+      // Por ahora, el webhook de n8n está sacando la IP del request.
+      return "IP_obtenida_por_backend";
+    }
+
+    async function submitData(expr) {
+      // El backend (n8n) obtiene la IP, ya no la enviamos desde aquí.
+      const payload = {
+        exp: expr,
+        // user_agent: navigator.userAgent // Opcional
+        client_dt: new Date().toISOString() // Enviar fecha del cliente
+      };
+      const r = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        mode: "cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!r.ok) {
+        const t = await r.text().catch(() => "");
+        throw newError("Webhook error: " + r.status + " " + t);
+      }
+      return r.json();
+    }
+
+    // === EVENT LISTENER PRINCIPAL (ACTUALIZADO) ===
+    opForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      
+      // 1. Poner estado "loading"
+      msg.className = 'msg loading'; 
+      msg.textContent = "Procesando operación…";
+      button.disabled = true;
+      hideModal(); // Ocultar modal si estaba abierto
+
+      try {
+        const expr = document.getElementById("expr").value.trim();
+        const data = await submitData(expr); // data ahora es tu NUEVO objeto
+
+        // 2. VALIDAR Y PARSEAR LA RESPUESTA
+        // ======================= INICIO DEL CAMBIO =======================
+        // Validamos que sea un objeto
+        if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+          throw new Error("Respuesta inesperada del servidor (no es un objeto).");
+        }
+        
+        // Apuntamos a los sub-objetos de tu nuevo JSON
+        const dbData = data.datos_guardados_en_bd || {};
+        const extraData = data.datos_recibidos_extra || {};
+        
+        // Extraemos datos usando las claves de tu NUEVO JSON
+        const resultado = dbData.resultado ?? "S/R";
+        const tipo = dbData.operacion ?? "?"; // (se mostrará la expresión "2+9")
+        const ciudad = extraData.ciudad ?? "N/D";
+        const ip = dbData.ip ?? "N/D";
+        const fecha = dbData.fecha_hora ?? "N/D";
+        // ======================= FIN DEL CAMBIO =======================
+        
+        // 3. CONSTRUIR EL HTML DEL MODAL
+        modalBody.innerHTML = `
+          <ul>
+            <li><strong>Resultado:</strong> <span>${resultado}</span></li>
+            <li><strong>Tipo:</strong> <span>${tipo}</span></li>
+            <li><strong>Ciudad:</strong> <span>${ciudad}</span></li>
+            <li><strong>IP Pública:</strong> <span>${ip}</span></li>
+            <li><strong>Fecha:</strong> <span>${fecha}</span></li>
+          </ul>
+        `;
+
+        // 4. MOSTRAR EL MODAL Y QUITAR "LOADING"
+        msg.className = 'msg'; // Ocultar mensaje de "loading"
+        msg.textContent = "";
+        modalOverlay.classList.add("visible");
+        modal.classList.add("visible");
+
+      } catch (err) {
+        // 5. MANEJAR ERROR
+        msg.className = 'msg error';
+        msg.textContent = "Error: " + err.message;
+      } finally {
+        // 6. REACTIVAR BOTÓN
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
